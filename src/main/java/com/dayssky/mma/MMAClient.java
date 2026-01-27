@@ -16,7 +16,9 @@ import com.dayssky.mma.features.gamestate.GameState;
 import com.dayssky.mma.util.SafeExceptionLogger;
 import com.dayssky.mma.util.TickScheduler;
 import com.dayssky.mma.util.Util;
+import com.dayssky.mma.util.BlockPosAdapter;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import java.io.IOException;
@@ -36,12 +38,16 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class MMAClient implements ClientModInitializer {
-    public static final Gson GSON = new Gson();
+    public static final Gson GSON = new GsonBuilder().setPrettyPrinting()
+            .registerTypeHierarchyAdapter(BlockPos.class, new BlockPosAdapter())
+            .create();
     public static final Logger LOGGER = LogManager.getLogger();
     public static final TickScheduler SCHEDULER = new TickScheduler();
     public static final GameState GAME_STATE = new GameState();
@@ -65,7 +71,7 @@ public class MMAClient implements ClientModInitializer {
     }
 
     public static void reload() {
-        MMAConfig config = (MMAConfig) CONFIG.get();
+        MMAConfig config = CONFIG.get();
         SIDEBAR = new SideBarManager(config);
     }
 
