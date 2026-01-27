@@ -1,16 +1,5 @@
 package com.dayssky.mma.features;
 
-import com.dayssky.mma.MMAClient;
-import com.dayssky.mma.MMAConfig;
-import com.dayssky.mma.Graphics;
-import com.dayssky.mma.features.Waypoint.Config;
-import com.dayssky.mma.util.ChatUtil;
-import com.google.common.base.Preconditions;
-import com.google.gson.JsonElement;
-import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.JsonOps;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -23,7 +12,19 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import me.shedaniel.autoconfig.annotation.ConfigEntry.ColorPicker;
+import org.lwjgl.glfw.GLFW;
+
+import com.dayssky.mma.Graphics;
+import com.dayssky.mma.MMAClient;
+import com.dayssky.mma.MMAConfig;
+import com.dayssky.mma.util.ChatUtil;
+import static com.dayssky.mma.util.CommandUtil.lit;
+import com.google.common.base.Preconditions;
+import com.google.gson.JsonElement;
+import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.JsonOps;
+
 import me.shedaniel.math.Color;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -40,23 +41,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
-import org.lwjgl.glfw.GLFW;
 
-
-import static com.dayssky.mma.util.CommandUtil.lit;
-
-public class Waypoint implements AbstractModule<Config> {
-    public static final class Config {
-        public boolean enable = false;
-        public boolean recordChests = false;
-        public boolean disableInPlots = true;
-        public boolean skipBrokenChests = false;
-        @ColorPicker
-        public int color = 0x00ff00;
-        public int radius = 128;
-        public List<String> disabledWorlds = new ArrayList<>();
-    }
-
+public class Waypoint {
     private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("mma-waypoint.json");
     private static final Path OLD_PATH = FabricLoader.getInstance().getConfigDir().resolve("mma-waypoint.json");
     private static final Path OLD_FMA_PATH = FabricLoader.getInstance().getConfigDir().resolve("fma-waypoint.json");
@@ -66,6 +52,10 @@ public class Waypoint implements AbstractModule<Config> {
             BlockPos.CODEC.listOf());
 
     private final Minecraft minecraft = Minecraft.getInstance();
+
+    private MMAConfig.Waypoints getConfig() {
+        return MMAClient.config().waypoints;
+    }
 
     private final KeyMapping toggleRecordingKey = new KeyMapping(
             "key.mma.toggleChestWaypointRecording",
@@ -136,10 +126,6 @@ public class Waypoint implements AbstractModule<Config> {
 
         synchronize(() -> {
             try {
-                final var json = CODEC.encodeStart(JsonOps.INSTANCE, copy)
-                        .result()
-                        .orElseThrow();
-
                 try (var w = Files.newBufferedWriter(Waypoint.PATH)) {
                     MMAClient.GSON.toJson(copy, w);
                 }
@@ -151,7 +137,7 @@ public class Waypoint implements AbstractModule<Config> {
     }
 
     private void add(Level level, BlockPos pos) {
-        if (!config().enable) {
+        if (!getConfig().enable) {
             return;
         }
 
@@ -161,21 +147,21 @@ public class Waypoint implements AbstractModule<Config> {
 
         final var dimId = level.dimension().location();
 
-        if (config().disableInPlots && dimId.getPath().contains("plot")) {
+        if (getConfig().disableInPlots && dimId.getPath().contains("plot")) {
             return;
         }
 
-        if (config().disabledWorlds.contains(dimId.toString())) {
+        if (getConfig().disabledWorlds.contains(dimId.toString())) {
             return;
         }
-        if (config().skipBrokenChests) {
+        if (getConfig().skipBrokenChests) {
             final var broken = brokenByWorld.get(level.dimension().location());
             if (broken != null) {
                 broken.add(pos);
             }
         }
 
-        if (!config().recordChests) {
+        if (!getConfig().recordChests) {
             return;
         }
 
@@ -183,12 +169,6 @@ public class Waypoint implements AbstractModule<Config> {
         save();
     }
 
-    @Override
-    public Config readConfigFrom(MMAConfig config) {
-        return config.features.waypoint;
-    }
-
-    @Override
     public void init() {
         load();
 
@@ -233,30 +213,27 @@ public class Waypoint implements AbstractModule<Config> {
         });
     }
 
-    @Override
     public void clientInit() {
 
     }
 
-    @Override
     public void tick() {
         if (toggleRecordingKey.consumeClick()) {
-            config().recordChests = !config().recordChests;
+            getConfig().recordChests = !getConfig().recordChests;
             // TODO: i18n
             ChatUtil.send(
-                    Component.literal("chest break recording: " + (config().recordChests ? "enabled" : "disabled")));
+                    Component.literal("chest break recording: " + (getConfig().recordChests ? "enabled" : "disabled")));
         }
 
         if (toggleKey.consumeClick()) {
-            config().enable = !config().enable;
+            getConfig().enable = !getConfig().enable;
             // TODO: i18n
-            ChatUtil.send(Component.literal("chest waypoints: " + (config().enable ? "enabled" : "disabled")));
+            ChatUtil.send(Component.literal("chest waypoints: " + (getConfig().enable ? "enabled" : "disabled")));
         }
     }
 
-    @Override
     public void render(WorldRenderContext context) {
-        if (!config().enable) {
+        if (!getConfig().enable) {
             return;
         }
 
@@ -270,11 +247,11 @@ public class Waypoint implements AbstractModule<Config> {
         }
 
         final var playerPos = player.position();
-        final long radiusSquared = config().radius * config().radius;
+        final long radiusSquared = getConfig().radius * getConfig().radius;
 
 
         for (final var entry : entries) {
-            if (config().skipBrokenChests && broken.contains(entry)) {
+            if (getConfig().skipBrokenChests && broken.contains(entry)) {
                 continue;
             }
 
@@ -287,11 +264,11 @@ public class Waypoint implements AbstractModule<Config> {
             double dz = z - playerPos.z;
             double distanceSquared = dx * dx + dy * dy + dz * dz;
 
-            if (distanceSquared > radiusSquared && config().radius != 0) {
+            if (distanceSquared > radiusSquared && getConfig().radius != 0) {
                 continue;
             }
 
-            final var color = Color.ofOpaque(config().color);
+            final var color = Color.ofOpaque(getConfig().color);
             LevelRenderer.renderLineBox(
                     context.matrixStack(),
                     consumer,
