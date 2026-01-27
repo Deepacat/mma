@@ -8,7 +8,9 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import me.shedaniel.autoconfig.AutoConfig;
@@ -51,6 +53,9 @@ public class MMAConfig implements ConfigData {
     @Category("zenith")
     @TransitiveObject
     public MMAConfig.Zenith zenith = new MMAConfig.Zenith();
+    @Category("waypoints")
+    @TransitiveObject
+    public MMAConfig.Waypoints waypoints = new MMAConfig.Waypoints();
 
     public static ConfigHolder<MMAConfig> register() {
         ConfigHolder<MMAConfig> holder = AutoConfig.register(
@@ -120,8 +125,6 @@ public class MMAConfig implements ConfigData {
         public String contractCheckText = "Switch your contract";
         public int contractThreshold = 40;
         public int czContractThreshold = 50;
-        @CollapsibleObject
-        public Waypoint.Config waypoint = new Waypoint.Config();
     }
 
     public @interface Hidden {
@@ -224,6 +227,17 @@ public class MMAConfig implements ConfigData {
         public boolean displayUUID = false;
         @ZenithAbilitySelection
         public Set<CharmEffectType> ignoredAbilities = new HashSet<>();
+    }
+
+    public static class Waypoints {
+        public boolean enable = false;
+        public boolean recordChests = false;
+        public boolean disableInPlots = true;
+        public boolean skipBrokenChests = false;
+        @ColorPicker
+        public int color = 0x00ff00;
+        public int radius = 128;
+        public List<String> disabledWorlds = new ArrayList<>();
     }
 
     @Retention(RetentionPolicy.RUNTIME)
