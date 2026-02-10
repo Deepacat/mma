@@ -1,5 +1,13 @@
 package com.dayssky.mma;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Objects;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.dayssky.mma.MMAConfig.Appearance;
 import com.dayssky.mma.MMAConfig.FeatureToggles;
 import com.dayssky.mma.debug.Debug;
@@ -13,36 +21,27 @@ import com.dayssky.mma.features.Waypoint;
 import com.dayssky.mma.features.cz.ZenithModule;
 import com.dayssky.mma.features.cz.data.CharmDataRegistries;
 import com.dayssky.mma.features.gamestate.GameState;
+import com.dayssky.mma.util.BlockPosAdapter;
 import com.dayssky.mma.util.SafeExceptionLogger;
 import com.dayssky.mma.util.TickScheduler;
 import com.dayssky.mma.util.Util;
-import com.dayssky.mma.util.BlockPosAdapter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Objects;
-
 import me.shedaniel.autoconfig.ConfigHolder;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.ClientStarted;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.EndTick;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.DebugRender;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public class MMAClient implements ClientModInitializer {
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting()
@@ -118,19 +117,22 @@ public class MMAClient implements ClientModInitializer {
         Commands.init();
         ZenithModule.init();
         LeaderboardUtils.init();
-        WAYPOINT.init();
         EntityShieldDisabledEvent.EVENT.register((EntityShieldDisabledEvent) entity -> GLOBAL_SAFE_EH.runSafely(() -> {
             if (SIDEBAR != null) {
                 SideBarManager.updateGuardTimer(entity);
             }
         }));
-        WorldRenderEvents.BEFORE_DEBUG_RENDER.register((DebugRender) context -> GLOBAL_SAFE_EH.runSafely(() -> {
+
+        WAYPOINT.init();
+        WorldRenderEvents.AFTER_ENTITIES.register(WAYPOINT::renderFilled);
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register((WorldRenderEvents.DebugRender) context -> GLOBAL_SAFE_EH.runSafely(() -> {
             PoseStack stack = context.matrixStack();
             stack.pushPose();
             stack.translate(-context.camera().getPosition().x, -context.camera().getPosition().y, -context.camera().getPosition().z);
-            WAYPOINT.render(context);
+            WAYPOINT.renderOutline(context);
             stack.popPose();
         }));
+
         VERSION_CHECK = new VersionChecker((MMAConfig) CONFIG.get());
         VERSION_CHECK.init();
     }
