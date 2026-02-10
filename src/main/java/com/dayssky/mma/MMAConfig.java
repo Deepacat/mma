@@ -239,6 +239,10 @@ public class MMAConfig implements ConfigData {
         @ColorPicker
         public int color = 0x00ff00;
         public int radius = 128;
+        public float filledAlpha = 0.75f;
+        public boolean filled = true;
+        public boolean outline = true;
+        public boolean distanceFade = true;
         public List<String> disabledWorlds = new ArrayList<>();
     }
 

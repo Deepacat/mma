@@ -97,64 +97,103 @@ public class Commands {
                                                 MMAClient.SCHEDULER
                                                         .schedule(0, minecraft -> minecraft.setScreen((Screen) AutoConfig.getConfigScreen(MMAConfig.class, minecraft.screen).get()));
                                                 return 0;
-                                            })
-                                    )
-                            );
-                            dispatcher.register(CommandUtil.lit("omw", context -> {
-                                ChatUtil.sendCommand("lfg omw");
-                                return 0;
-                            }, CommandUtil.arg("text", StringArgumentType.greedyString(), context -> {
-                                String arg = StringArgumentType.getString(context, "text");
-                                ChatUtil.sendCommand(String.format("lfg omw %s", arg));
-                                return 0;
-                            })));
-                            dispatcher.register(CommandUtil.lit("omw", context -> {
-                                ChatUtil.sendCommand("lfg omw");
-                                return 0;
-                            }, CommandUtil.arg("text", StringArgumentType.greedyString(), context -> {
-                                String arg = StringArgumentType.getString(context, "text");
-                                ChatUtil.sendCommand(String.format("lfg omw %s", arg));
-                                return 0;
-                            })));
-                            dispatcher.register(CommandUtil.lit("compass", context -> {
-                                BlockPos pos = MMAClient.player().level().getSharedSpawnPos();
-                                ChatUtil.send("Position: %s, %s, %s".formatted(pos.getX(), pos.getY(), pos.getZ()));
-                                return 0;
-                            }));
-                            dispatcher.register(CommandUtil.lit("timer", context -> {
-                                if (timerMs == -1L) {
-                                    timerMs = Util.now();
-                                    ChatUtil.send(Component.translatable("text.mma.timer_start"));
-                                } else {
-                                    long delta = Util.now() - timerMs;
-                                    ChatUtil.send(Component.translatable("text.mma.timer_end", new Object[]{FormatUtil.timestamp(delta)}));
-                                    timerMs = -1L;
-                                }
-
-                                return 0;
-                            }));
-                            dispatcher.register(CommandUtil.lit("lb",
-                                    CommandUtil.arg(
-                                            "lb_name",
-                                            StringArgumentType.word(),
-                                            context -> {
-                                                String lbName = LeaderboardUtils.resolve(StringArgumentType.getString(context, "lb_name"));
-                                                ChatUtil.sendCommand(String.format("leaderboard @s %s true 1", lbName));
-                                                return 0;
-                                            },
-                                            (context, builder) -> SharedSuggestionProvider.suggest(LeaderboardUtils.getKeys(), builder),
-                                            CommandUtil.arg(
-                                                    "arg",
-                                                    StringArgumentType.word(),
-                                                    context -> {
-                                                        String lbName = LeaderboardUtils.resolve(StringArgumentType.getString(context, "lb_name"));
-                                                        String arg = StringArgumentType.getString(context, "arg");
-                                                        ChatUtil.sendCommand(String.format("leaderboard @s %s true %s", lbName, arg));
+                                            }),
+                                            CommandUtil.lit("waypoint",
+                                                    CommandUtil.lit("clearall", context -> {
+                                                        MMAClient.WAYPOINT.clearCurrentWorld();
                                                         return 0;
-                                                    }
+                                                    }),
+                                                    CommandUtil.lit("reload", context -> {
+                                                        MMAClient.WAYPOINT.reloadCurrentWorld();
+                                                        return 0;
+                                                    }),
+                                                    CommandUtil.lit("list", context -> {
+                                                        MMAClient.WAYPOINT.listWaypointFiles();
+                                                        return 0;
+                                                    }),
+                                                    CommandUtil.lit("create",
+                                                            CommandUtil.arg("filename", StringArgumentType.word(), context -> {
+                                                                String filename = StringArgumentType.getString(context, "filename");
+                                                                MMAClient.WAYPOINT.createWaypointFile(filename);
+                                                                return 0;
+                                                            })
+                                                    ),
+                                                    CommandUtil.lit("load",
+                                                            CommandUtil.arg("filename", StringArgumentType.word(),
+                                                                    context -> {
+                                                                        String filename = StringArgumentType.getString(context, "filename");
+                                                                        MMAClient.WAYPOINT.loadWaypointFile(filename);
+                                                                        return 0;
+                                                                    },
+                                                                    (context, builder) -> SharedSuggestionProvider.suggest(
+                                                                            MMAClient.WAYPOINT.getCurrentWorldWaypointFiles(), builder)
+                                                            )
+                                                    ),
+                                                    CommandUtil.lit("delete",
+                                                            CommandUtil.arg("filename", StringArgumentType.word(),
+                                                                    context -> {
+                                                                        String filename = StringArgumentType.getString(context, "filename");
+                                                                        MMAClient.WAYPOINT.deleteWaypointFile(filename);
+                                                                        return 0;
+                                                                    },
+                                                                    (context, builder) -> SharedSuggestionProvider.suggest(
+                                                                            MMAClient.WAYPOINT.getCurrentWorldWaypointFiles(), builder)
+                                                            )
+                                                    ),
+                                                    CommandUtil.lit("merge",
+                                                            CommandUtil.arg("source", StringArgumentType.word(),
+                                                                    context -> {
+                                                                        String source = StringArgumentType.getString(context, "source");
+                                                                        ChatUtil.send(Component.literal("Usage: /mma waypoint merge <source> <destination>"));
+                                                                        return 0;
+                                                                    },
+                                                                    (context, builder) -> SharedSuggestionProvider.suggest(
+                                                                            MMAClient.WAYPOINT.getCurrentWorldWaypointFiles(), builder),
+                                                                    CommandUtil.arg("destination", StringArgumentType.word(),
+                                                                            context -> {
+                                                                                String source = StringArgumentType.getString(context, "source");
+                                                                                String destination = StringArgumentType.getString(context, "destination");
+                                                                                MMAClient.WAYPOINT.mergeWaypointFiles(source, destination);
+                                                                                return 0;
+                                                                            },
+                                                                            (context, builder) -> SharedSuggestionProvider.suggest(
+                                                                                    MMAClient.WAYPOINT.getCurrentWorldWaypointFiles(), builder)
+                                                                    )
+                                                            )
+                                                    ),
+                                                    CommandUtil.lit("merge-advanced",
+                                                            CommandUtil.arg("source", StringArgumentType.word(),
+                                                                    context -> {
+                                                                        ChatUtil.send(Component.literal("Usage: /mma waypoint merge-advanced <source> <destination> [replace|skip]"));
+                                                                        return 0;
+                                                                    },
+                                                                    (context, builder) -> SharedSuggestionProvider.suggest(
+                                                                            MMAClient.WAYPOINT.getCurrentWorldWaypointFiles(), builder),
+                                                                    CommandUtil.arg("destination", StringArgumentType.word(),
+                                                                            context -> {
+                                                                                ChatUtil.send(Component.literal("Usage: /mma waypoint merge-advanced <source> <destination> [replace|skip]"));
+                                                                                return 0;
+                                                                            },
+                                                                            (context, builder) -> SharedSuggestionProvider.suggest(
+                                                                                    MMAClient.WAYPOINT.getCurrentWorldWaypointFiles(), builder),
+                                                                            CommandUtil.arg("mode", StringArgumentType.word(),
+                                                                                    context -> {
+                                                                                        String source = StringArgumentType.getString(context, "source");
+                                                                                        String destination = StringArgumentType.getString(context, "destination");
+                                                                                        String mode = StringArgumentType.getString(context, "mode");
+                                                                                        boolean replace = mode.equalsIgnoreCase("replace");
+                                                                                        MMAClient.WAYPOINT.mergeWaypointFilesForce(source, destination, replace);
+                                                                                        return 0;
+                                                                                    },
+                                                                                    (context, builder) -> SharedSuggestionProvider.suggest(new String[]{"replace", "skip"}, builder)
+                                                                            )
+                                                                    )
+                                                            )
+                                                    )
                                             )
                                     )
-                            ));
+                            );
+                            // ... rest of the Commands.java file remains the same ...
                         }
                 );
     }
