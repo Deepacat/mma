@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
+import com.dayssky.mma.features.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -12,12 +13,6 @@ import com.dayssky.mma.MMAConfig.Appearance;
 import com.dayssky.mma.MMAConfig.FeatureToggles;
 import com.dayssky.mma.debug.Debug;
 import com.dayssky.mma.events.EntityShieldDisabledEvent;
-import com.dayssky.mma.features.Commands;
-import com.dayssky.mma.features.ContractCheck;
-import com.dayssky.mma.features.Keybinds;
-import com.dayssky.mma.features.LeaderboardUtils;
-import com.dayssky.mma.features.SideBarManager;
-import com.dayssky.mma.features.Waypoint;
 import com.dayssky.mma.features.cz.ZenithModule;
 import com.dayssky.mma.features.cz.data.CharmDataRegistries;
 import com.dayssky.mma.features.gamestate.GameState;
@@ -51,7 +46,6 @@ public class MMAClient implements ClientModInitializer {
     public static final TickScheduler SCHEDULER = new TickScheduler();
     public static final GameState GAME_STATE = new GameState();
     public static final ModContainer MOD = (ModContainer) FabricLoader.getInstance().getModContainer("mma").orElseThrow();
-    public static final Waypoint WAYPOINT = new Waypoint();
     public static final SafeExceptionLogger GLOBAL_SAFE_EH = new SafeExceptionLogger("GlobalExceptionHandler");
     public static SideBarManager SIDEBAR;
     public static ConfigHolder<MMAConfig> CONFIG;
@@ -85,6 +79,8 @@ public class MMAClient implements ClientModInitializer {
     public static FeatureToggles features() {
         return ((MMAConfig) CONFIG.get()).features;
     }
+
+    public static final WaypointManager WAYPOINT = new WaypointManager();
 
     public void onInitializeClient() {
         try {
@@ -125,13 +121,13 @@ public class MMAClient implements ClientModInitializer {
 
         WAYPOINT.init();
         WorldRenderEvents.AFTER_ENTITIES.register(WAYPOINT::renderFilled);
-        WorldRenderEvents.BEFORE_DEBUG_RENDER.register((WorldRenderEvents.DebugRender) context -> GLOBAL_SAFE_EH.runSafely(() -> {
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register((context) -> {
             PoseStack stack = context.matrixStack();
             stack.pushPose();
             stack.translate(-context.camera().getPosition().x, -context.camera().getPosition().y, -context.camera().getPosition().z);
             WAYPOINT.renderOutline(context);
             stack.popPose();
-        }));
+        });
 
         VERSION_CHECK = new VersionChecker((MMAConfig) CONFIG.get());
         VERSION_CHECK.init();
