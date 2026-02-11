@@ -1,6 +1,5 @@
 package com.dayssky.mma;
 
-import com.dayssky.mma.features.Waypoint;
 import com.dayssky.mma.features.cz.data.CharmEffectType;
 import com.dayssky.mma.features.cz.data.CharmType;
 
@@ -236,6 +235,12 @@ public class MMAConfig implements ConfigData {
         public boolean skipBrokenChests = false;
         @ColorPicker
         public int color = 0x00ff00;
+        public boolean enableLootTracking = false;
+        @ColorPicker public int lootedColor = 0x808080;        // gray
+        @ColorPicker public int routeNextColor = 0x00FF00;     // green
+        @ColorPicker public int routeLootedColor = 0x808080;   // gray
+        @ColorPicker public int routeUnlootedColor = 0xFFAA00; // orange
+        public boolean onlyShowNextInRoute = false;
         public int radius = 128;
         public float filledAlpha = 0.75f;
         public boolean filled = true;
