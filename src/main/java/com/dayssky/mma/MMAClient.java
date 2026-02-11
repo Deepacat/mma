@@ -122,11 +122,8 @@ public class MMAClient implements ClientModInitializer {
         WAYPOINT.init();
         WorldRenderEvents.AFTER_ENTITIES.register(WAYPOINT::renderFilled);
         WorldRenderEvents.BEFORE_DEBUG_RENDER.register((context) -> {
-            PoseStack stack = context.matrixStack();
-            stack.pushPose();
-            stack.translate(-context.camera().getPosition().x, -context.camera().getPosition().y, -context.camera().getPosition().z);
             WAYPOINT.renderOutline(context);
-            stack.popPose();
+            WAYPOINT.renderLabels(context);
         });
 
         VERSION_CHECK = new VersionChecker((MMAConfig) CONFIG.get());
@@ -137,6 +134,4 @@ public class MMAClient implements ClientModInitializer {
         WAYPOINT.clientInit();
         reload();
     }
-
-
 }

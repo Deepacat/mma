@@ -446,6 +446,7 @@ public class WaypointManager {
         Path path = getRouteFilePath(worldId, name);
         if (!Files.exists(path)) return new ArrayList<>();
         try (var in = Files.newBufferedReader(path)) {
+            // Use the same Gson instance that has BlockPosAdapter registered
             List<BlockPos> list = MMAClient.GSON.fromJson(in, new TypeToken<List<BlockPos>>() {}.getType());
             return list != null ? list : new ArrayList<>();
         } catch (Exception e) {
@@ -592,13 +593,10 @@ public class WaypointManager {
         return stream.toList();
     }
 
+
     // for route rendering – expose active route positions
     public List<BlockPos> getActiveRoutePositions() {
         return activeRoutePositions;
-    }
-
-    public boolean onlyShowNextInRoute() {
-        return getConfig().onlyShowNextInRoute;
     }
 
     public void renderFilled(WorldRenderContext context) {
@@ -607,6 +605,10 @@ public class WaypointManager {
 
     public void renderOutline(WorldRenderContext context) {
         renderer.renderOutline(context);
+    }
+
+    public void renderLabels(WorldRenderContext context) {
+        renderer.renderLabels(context);
     }
 
     // ------------------------------------------------------------------------

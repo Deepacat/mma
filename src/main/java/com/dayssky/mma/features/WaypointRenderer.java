@@ -11,6 +11,7 @@ import me.shedaniel.math.Color;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
@@ -19,6 +20,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
+import java.util.List;
 import java.util.Objects;
 
 public class WaypointRenderer {
@@ -179,6 +181,109 @@ public class WaypointRenderer {
                     col.getBlue() / 255f,
                     1.0f
             );
+        }
+    }
+
+    public void renderLabels(WorldRenderContext context) {
+        if (!getConfig().enable || !getConfig().displayRouteLabels) return;
+        var player = minecraft.player;
+        if (player == null) return;
+        List<BlockPos> route = manager.getActiveRoutePositions();
+        if (route == null || route.isEmpty()) return;
+
+        PoseStack poseStack = context.matrixStack();
+        var buffers = context.consumers();
+        if (buffers == null) return;
+
+        Camera camera = context.camera();
+        Vec3 cam = camera.getPosition();
+        var font = minecraft.font;
+        int light = 0xF000F0;
+
+        for (WaypointEntry entry : manager.getEntries()) {
+            BlockPos pos = entry.pos();
+
+            int index = -1;
+            for (int i = 0; i < route.size(); i++) {
+                BlockPos routePos = route.get(i);
+                if (routePos.getX() == pos.getX() &&
+                        routePos.getY() == pos.getY() &&
+                        routePos.getZ() == pos.getZ()) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index == -1) continue;
+
+            String text = "#" + (index + 1);
+            float x = pos.getX() + 0.5f;
+            float y = pos.getY() + 0.6f;
+            float z = pos.getZ() + 0.5f;
+
+            poseStack.pushPose();
+            poseStack.translate(x - cam.x, y - cam.y, z - cam.z);
+            poseStack.mulPose(minecraft.getEntityRenderDispatcher().cameraOrientation());
+
+            float scale = 0.025f;
+            poseStack.scale(-scale, -scale, scale);
+
+            float textWidth = font.width(text);
+            float xOffset = -textWidth / 2f;
+            float yOffset = -font.lineHeight / 2f;
+
+            float bgPad = 3.0f;
+            float bgX = xOffset - bgPad;
+            float bgY = yOffset - bgPad;
+            float bgWidth = textWidth + bgPad * 2;
+            float bgHeight = font.lineHeight + bgPad * 2;
+            float bgAlpha = 200;
+
+            Matrix4f pose = poseStack.last().pose();
+
+            VertexConsumer background = buffers.getBuffer(RenderType.textBackgroundSeeThrough());
+
+            // Bottom‑left
+            background.vertex(pose, bgX, bgY, 0)
+                    .color(0, 0, 0, bgAlpha)        // translucent black (alpha bgAlpha)
+                    .uv(0, 0)
+                    .uv2(light)
+                    .normal(0, 0, 0)
+                    .endVertex();
+            // Top‑left
+            background.vertex(pose, bgX, bgY + bgHeight, 0)
+                    .color(0, 0, 0, bgAlpha)
+                    .uv(0, 1)
+                    .uv2(light)
+                    .normal(0, 0, 0)
+                    .endVertex();
+            // Top‑right
+            background.vertex(pose, bgX + bgWidth, bgY + bgHeight, 0)
+                    .color(0, 0, 0, bgAlpha)
+                    .uv(1, 1)
+                    .uv2(light)
+                    .normal(0, 0, 0)
+                    .endVertex();
+            // Bottom‑right
+            background.vertex(pose, bgX + bgWidth, bgY, 0)
+                    .color(0, 0, 0, bgAlpha)
+                    .uv(1, 0)
+                    .uv2(light)
+                    .normal(0, 0, 0)
+                    .endVertex();
+
+            font.drawInBatch(
+                    text,
+                    xOffset, yOffset,
+                    0xFFFFFFFF,
+                    false,
+                    pose,
+                    buffers,
+                    Font.DisplayMode.SEE_THROUGH,
+                    0, // Using separately rendered background
+                    light
+            );
+
+            poseStack.popPose();
         }
     }
 }

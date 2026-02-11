@@ -233,20 +233,26 @@ public class MMAConfig implements ConfigData {
         public boolean recordChests = false;
         public boolean disableInPlots = true;
         public boolean skipBrokenChests = false;
-        @ColorPicker
-        public int color = 0x00ff00;
-        public boolean enableLootTracking = false;
-        @ColorPicker public int lootedColor = 0x808080;        // gray
-        @ColorPicker public int routeNextColor = 0x00FF00;     // green
-        @ColorPicker public int routeLootedColor = 0x808080;   // gray
-        @ColorPicker public int routeUnlootedColor = 0xFFAA00; // orange
-        public boolean onlyShowNextInRoute = false;
+        @ColorPicker public int color = 0x00ff00;
         public int radius = 128;
         public float filledAlpha = 0.75f;
         public boolean filled = true;
         public boolean outline = true;
         public boolean distanceFade = true;
         public List<String> disabledWorlds = new ArrayList<>();
+
+        // Loot tracking
+        public boolean enableLootTracking = false;
+        @ColorPicker public int lootedColor = 0x808080;
+
+        // Route colors
+        @ColorPicker public int routeNextColor = 0x00FF00;
+        @ColorPicker public int routeLootedColor = 0x808080;
+        @ColorPicker public int routeUnlootedColor = 0xFFAA00;
+        public boolean onlyShowNextInRoute = false;
+
+        // Route labels
+        public boolean displayRouteLabels = true;
     }
 
     @Retention(RetentionPolicy.RUNTIME)
