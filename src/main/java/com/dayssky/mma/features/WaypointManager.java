@@ -62,6 +62,11 @@ public class WaypointManager {
     private Map<ResourceLocation, Set<BlockPos>> brokenByWorld = new HashMap<>();
     private Map<ResourceLocation, String> currentWaypointFiles = new HashMap<>();
 
+    // pending removal (double‑tap protection)
+    private BlockPos pendingRemovePos = null;
+    private long pendingRemoveTime = 0;
+    private static final long REMOVE_CONFIRM_TICKS = 100; // 5 seconds
+
     // route system
     private String activeRouteName = null;
     private List<BlockPos> activeRoutePositions = null;
@@ -75,12 +80,12 @@ public class WaypointManager {
     private final KeyMapping toggleRecordingKey = new KeyMapping(
             "key.mma.toggleChestWaypointRecording",
             InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_K,
+            InputConstants.UNKNOWN.getValue(),
             "category.mma");
     private final KeyMapping toggleKey = new KeyMapping(
             "key.mma.toggleChestWaypoint",
             InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_N,
+            InputConstants.UNKNOWN.getValue(),
             "category.mma");
 
     private Waypoints getConfig() {
@@ -339,6 +344,15 @@ public class WaypointManager {
         }
         activeRoutePositions = loadRoutePositions(worldId, name);
         activeRouteName = name;
+
+        // Reset looted state for all chests in this route
+        if (activeRoutePositions != null) {
+            for (BlockPos pos : activeRoutePositions) {
+                setLooted(worldId, pos, false);
+            }
+            ChatUtil.send(Component.literal("Reset looted state for all waypoints in route."));
+        }
+
         ChatUtil.send(Component.literal("Loaded route '" + name + "' (" + activeRoutePositions.size() + " waypoints)."));
     }
 
@@ -392,8 +406,7 @@ public class WaypointManager {
         }
     }
 
-    // add looked-at waypoint to front of tracking route
-    public void addLookedAtWaypointToRouteFront() {
+    public void addLookedAtWaypointToRouteEnd() {
         if (trackingRouteName == null) {
             ChatUtil.send(Component.literal("No route is currently being tracked."));
             return;
@@ -407,20 +420,43 @@ public class WaypointManager {
             ChatUtil.send(Component.literal("Waypoint already in route."));
             return;
         }
-        trackingRoutePositions.add(0, target);
+        trackingRoutePositions.add(target); // append to end
         saveRoute(trackingRouteName);
-        ChatUtil.send(Component.literal("Added waypoint to front of route '" + trackingRouteName + "'."));
+        ChatUtil.send(Component.literal("Added waypoint to end of route '" + trackingRouteName + "' (#" + trackingRoutePositions.size() + ")."));
     }
 
-    // remove last added waypoint from tracking route
+    // remove the last (newest) waypoint from tracking route
     public void removeLastWaypointFromRoute() {
-        if (trackingRouteName == null || trackingRoutePositions.isEmpty()) {
+        if (trackingRouteName == null || trackingRoutePositions == null || trackingRoutePositions.isEmpty()) {
             ChatUtil.send(Component.literal("No waypoints in current route to remove."));
             return;
         }
         BlockPos removed = trackingRoutePositions.remove(trackingRoutePositions.size() - 1);
         saveRoute(trackingRouteName);
         ChatUtil.send(Component.literal("Removed waypoint " + removed.toShortString() + " from route '" + trackingRouteName + "'."));
+    }
+
+    public void toggleRouteWaypoint(BlockPos pos) {
+        if (trackingRouteName == null) {
+            ChatUtil.send(Component.literal("No route is currently being tracked."));
+            return;
+        }
+        int index = trackingRoutePositions.indexOf(pos);
+        if (index == -1) {
+            // Not in route → add to end
+            trackingRoutePositions.add(pos);
+            saveRoute(trackingRouteName);
+            ChatUtil.send(Component.literal("Added waypoint to end of route '" + trackingRouteName + "' (#" + trackingRoutePositions.size() + ")."));
+        } else {
+            // Already in route → remove only if it's the last (newest)
+            if (index == trackingRoutePositions.size() - 1) {
+                BlockPos removed = trackingRoutePositions.remove(index);
+                saveRoute(trackingRouteName);
+                ChatUtil.send(Component.literal("Removed waypoint " + removed.toShortString() + " from route '" + trackingRouteName + "'."));
+            } else {
+                ChatUtil.send(Component.literal("Waypoint already in route but not the newest; cannot remove."));
+            }
+        }
     }
 
     private void saveRoute(String name) {
@@ -435,7 +471,8 @@ public class WaypointManager {
         try {
             Files.createDirectories(path.getParent());
             try (var w = Files.newBufferedWriter(path)) {
-                MMAClient.GSON.toJson(trackingRoutePositions, w);
+                // 🔁 Use COMPACT_GSON to write each BlockPos as [x,y,z] without extra whitespace
+                COMPACT_GSON.toJson(trackingRoutePositions, w);
             }
         } catch (Exception e) {
             MMAClient.LOGGER.warn("Failed to save route " + name, e);
@@ -459,6 +496,7 @@ public class WaypointManager {
         return trackingRouteName;
     }
 
+
     // ------------------------------------------------------------------------
     // Find waypoint in crosshair (for keybinds)
     // ------------------------------------------------------------------------
@@ -473,7 +511,7 @@ public class WaypointManager {
         Vec3 look = player.getLookAngle();
 
         BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
+        double bestDot = maxAngleCos; // require at least this, higher is better
 
         for (WaypointEntry entry : entries) {
             BlockPos pos = entry.pos();
@@ -483,14 +521,9 @@ public class WaypointManager {
             if (distance > maxDistance) continue;
 
             Vec3 direction = to.normalize();
-            double cos = look.dot(direction);
-            if (cos < maxAngleCos) continue;
-
-            // score: distance penalized by angle difference
-            double angleFactor = 1.0 - cos; // 0 when perfect alignment
-            double score = distance * (1 + angleFactor * 2);
-            if (score < bestScore) {
-                bestScore = score;
+            double dot = look.dot(direction);
+            if (dot > bestDot) {
+                bestDot = dot;
                 best = pos;
             }
         }
@@ -498,21 +531,60 @@ public class WaypointManager {
     }
 
     // ------------------------------------------------------------------------
+    // Handler for waypoint removal keybind
+    // ------------------------------------------------------------------------
+    public void handleRemoveWaypoint() {
+        BlockPos target = findClosestWaypointInSight(64, Math.cos(Math.toRadians(30)));
+        if (target == null) {
+            ChatUtil.send(Component.literal("No waypoint in sight."));
+            pendingRemovePos = null;
+            return;
+        }
+
+        long now = minecraft.level != null ? minecraft.level.getGameTime() : 0;
+        if (pendingRemovePos != null && pendingRemovePos.equals(target) && (now - pendingRemoveTime) < REMOVE_CONFIRM_TICKS) {
+            // confirmed – remove it
+            var level = MMAClient.level();
+            if (level != null) {
+                remove(level.dimension().location(), target);
+                ChatUtil.send(Component.literal("Waypoint removed."));
+            }
+            pendingRemovePos = null;
+        } else {
+            // first press – set pending and change color
+            pendingRemovePos = target;
+            pendingRemoveTime = now;
+            ChatUtil.send(Component.literal("Press again within 5 seconds to remove waypoint at " + target.toShortString()));
+        }
+    }
+
+    // ------------------------------------------------------------------------
     // Color calculation (used by renderer)
     // ------------------------------------------------------------------------
     public int getColorForWaypoint(WaypointEntry entry, Vec3 playerPos) {
+        BlockPos pos = entry.pos();
+        // Pending removal highlight – reversed color with fallback
+        if (pendingRemovePos != null && pendingRemovePos.equals(pos)) {
+            long now = minecraft.level != null ? minecraft.level.getGameTime() : 0;
+            if (now - pendingRemoveTime < REMOVE_CONFIRM_TICKS) {
+                return getPendingRemoveHighlightColor(entry, playerPos);
+            } else {
+                pendingRemovePos = null; // expired
+            }
+        }
+        return computeNormalColor(entry, playerPos);
+    }
+
+    private int computeNormalColor(WaypointEntry entry, Vec3 playerPos) {
         Waypoints cfg = getConfig();
         BlockPos pos = entry.pos();
 
-        // Route rendering takes precedence
         if (activeRoutePositions != null && !activeRoutePositions.isEmpty()) {
             int index = activeRoutePositions.indexOf(pos);
             if (index != -1) {
-                // chest is in the active route
                 if (entry.looted()) {
                     return cfg.routeLootedColor;
                 }
-                // find first unlooted chest in route
                 int firstUnlooted = -1;
                 for (int i = 0; i < activeRoutePositions.size(); i++) {
                     BlockPos p = activeRoutePositions.get(i);
@@ -527,11 +599,33 @@ public class WaypointManager {
             }
         }
 
-        // Not in route: regular looted or normal color
         if (cfg.enableLootTracking && entry.looted()) {
             return cfg.lootedColor;
         }
         return cfg.color;
+    }
+
+    private int getPendingRemoveHighlightColor(WaypointEntry entry, Vec3 playerPos) {
+        int normal = computeNormalColor(entry, playerPos);
+        int r = (normal >> 16) & 0xFF;
+        int g = (normal >> 8) & 0xFF;
+        int b = normal & 0xFF;
+
+        // Simple inversion
+        int invR = 255 - r;
+        int invG = 255 - g;
+        int invB = 255 - b;
+
+        // Check if the inverted color is too gray (low saturation)
+        int max = Math.max(Math.max(invR, invG), invB);
+        int min = Math.min(Math.min(invR, invG), invB);
+        int saturation = max - min;
+        if (saturation < 64) { // threshold for "gray"
+            // Use bright red
+            return 0xFFFF0000;
+        }
+
+        return 0xFF000000 | (invR << 16) | (invG << 8) | invB;
     }
 
     private boolean isLooted(BlockPos pos) {
@@ -914,8 +1008,6 @@ public class WaypointManager {
         }
     }
 
-
-
     // ------------------------------------------------------------------------
     // Helper: current filename, selections, async
     // ------------------------------------------------------------------------
@@ -961,13 +1053,6 @@ public class WaypointManager {
         }
     }
 
-    private void synchronize(Runnable r) {
-        CompletableFuture<Void> newToken = new CompletableFuture<>();
-        currCompletionToken.thenRunAsync(r).thenRunAsync(() -> newToken.complete(null), Minecraft.getInstance());
-        currCompletionToken = newToken;
-    }
-
-
     private void load() {
         migrateOldData();
         loadSelections();
@@ -976,7 +1061,6 @@ public class WaypointManager {
     }
 
     // Migration functions
-
     private void migrateOldData() {
         // Check old FMA path first
         if (Files.exists(OLD_FMA_PATH)) {

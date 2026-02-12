@@ -217,7 +217,7 @@ public class WaypointRenderer {
 
             String text = "#" + (index + 1);
             float x = pos.getX() + 0.5f;
-            float y = pos.getY() + 0.6f;
+            float y = pos.getY() + getConfig().labelYOffset;
             float z = pos.getZ() + 0.5f;
 
             poseStack.pushPose();
