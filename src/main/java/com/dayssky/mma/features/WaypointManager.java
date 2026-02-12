@@ -28,7 +28,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
-import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -599,10 +598,10 @@ public class WaypointManager {
             }
         }
 
-        if (cfg.enableLootTracking && entry.looted()) {
-            return cfg.lootedColor;
+        if (cfg.enableLootStateTracking && entry.looted()) {
+            return cfg.lootedStateColor;
         }
-        return cfg.color;
+        return cfg.baseColor;
     }
 
     private int getPendingRemoveHighlightColor(WaypointEntry entry, Vec3 playerPos) {

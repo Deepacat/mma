@@ -230,30 +230,26 @@ public class MMAConfig implements ConfigData {
 
     public static class Waypoints {
         public boolean enable = false;
-        public boolean recordChests = false;
+        public boolean recordChests = true;
         public boolean disableInPlots = true;
         public boolean skipBrokenChests = false;
-        @ColorPicker public int color = 0x00ff00;
-        public int radius = 128;
+        public boolean enableLootStateTracking = false;
+        public List<String> disabledWorlds = new ArrayList<>(List.of("monumenta:zenith", "monumenta:depths", "monumenta:corridors"));
+        // Rendering
+        public boolean onlyShowNextInRoute = false;
+        public boolean displayRouteNumberLabels = true;
+        public float labelYOffset = 0.6f;
         public float filledAlpha = 0.75f;
         public boolean filled = true;
-        public boolean outline = true;
+        public boolean outline = false;
         public boolean distanceFade = true;
-        public List<String> disabledWorlds = new ArrayList<>();
-
-        // Loot tracking
-        public boolean enableLootTracking = false;
-        @ColorPicker public int lootedColor = 0x808080;
-
-        // Route colors
+        public int radius = 128;
+        // Colors
+        @ColorPicker public int baseColor = 0xFFAA00;
+        @ColorPicker public int lootedStateColor = 0x808080;
         @ColorPicker public int routeNextColor = 0x00FF00;
         @ColorPicker public int routeLootedColor = 0x808080;
         @ColorPicker public int routeUnlootedColor = 0xFFAA00;
-        public boolean onlyShowNextInRoute = false;
-
-        // Route labels
-        public boolean displayRouteLabels = true;
-        public float labelYOffset = 0.6f;
     }
 
     @Retention(RetentionPolicy.RUNTIME)

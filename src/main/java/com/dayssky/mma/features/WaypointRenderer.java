@@ -185,7 +185,7 @@ public class WaypointRenderer {
     }
 
     public void renderLabels(WorldRenderContext context) {
-        if (!getConfig().enable || !getConfig().displayRouteLabels) return;
+        if (!getConfig().enable || !getConfig().displayRouteNumberLabels) return;
         var player = minecraft.player;
         if (player == null) return;
         List<BlockPos> route = manager.getActiveRoutePositions();
@@ -282,7 +282,6 @@ public class WaypointRenderer {
                     0, // Using separately rendered background
                     light
             );
-
             poseStack.popPose();
         }
     }
