@@ -15,16 +15,10 @@ public class Keybinds {
     private static final KeyMapping keyBindingMeow = new KeyMapping("key.mma.meow", InputConstants.Type.KEYSYM, -1, "category.mma");
     private static final KeyMapping keyBindingPS = new KeyMapping("key.mma.playerstats", InputConstants.Type.MOUSE, 2, "category.mma");
     private static final KeyMapping togglePlayerHpIndicator = new KeyMapping("key.mma.togglePlayerHpIndicator", InputConstants.Type.KEYSYM, 66, "category.mma");
-
-    // New keybinds
     private static final KeyMapping removeWaypointKey = new KeyMapping("key.mma.removeWaypoint", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_DELETE, "category.mma");
-    private static final KeyMapping toggleLootStateKey = new KeyMapping("key.mma.toggleLootState", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_L, "category.mma");
-    private static final KeyMapping routeAddRemoveKey = new KeyMapping("key.mma.routeAddRemove", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.mma");
-
-    // Double-press state for remove waypoint
-    private static BlockPos pendingRemovePos = null;
-    private static long pendingRemoveTime = 0;
-    private static final long REMOVE_CONFIRM_TICKS = 100; // 5 seconds (100 ticks @ 20 tps)
+    private static final KeyMapping toggleLootStateKey = new KeyMapping("key.mma.toggleLootState", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "category.mma");
+    private static final KeyMapping routeAddRemoveKey = new KeyMapping("key.mma.routeAddRemove", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "category.mma");
+    private static final KeyMapping resetLootStateKey = new KeyMapping("key.mma.resetLootState", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "category.mma");
 
     private static long meowMsNext = System.currentTimeMillis();
 
@@ -35,11 +29,10 @@ public class Keybinds {
         KeyBindingHelper.registerKeyBinding(removeWaypointKey);
         KeyBindingHelper.registerKeyBinding(toggleLootStateKey);
         KeyBindingHelper.registerKeyBinding(routeAddRemoveKey);
+        KeyBindingHelper.registerKeyBinding(resetLootStateKey);
     }
 
     public static void tick() {
-        Minecraft mc = Minecraft.getInstance();
-
         if (keyBindingMeow.consumeClick()) {
             onPressedMeow();
         }
@@ -54,28 +47,7 @@ public class Keybinds {
         // ---------- Remove waypoint (double press) ----------
         if (removeWaypointKey.consumeClick()) {
             WaypointManager wm = MMAClient.WAYPOINT;
-            BlockPos target = wm.findClosestWaypointInSight(64, Math.cos(Math.toRadians(30)));
-            if (target == null) {
-                ChatUtil.send(Component.literal("No waypoint in sight."));
-                pendingRemovePos = null;
-                return;
-            }
-
-            long now = mc.level != null ? mc.level.getGameTime() : 0;
-            if (pendingRemovePos != null && pendingRemovePos.equals(target) && (now - pendingRemoveTime) < REMOVE_CONFIRM_TICKS) {
-                // confirmed – remove it
-                var level = MMAClient.level();
-                if (level != null) {
-                    wm.remove(level.dimension().location(), target);
-                    ChatUtil.send(Component.literal("Waypoint removed."));
-                }
-                pendingRemovePos = null;
-            } else {
-                // first press
-                pendingRemovePos = target;
-                pendingRemoveTime = now;
-                ChatUtil.send(Component.literal("Press again within 5 seconds to remove waypoint at " + target.toShortString()));
-            }
+            wm.handleRemoveWaypoint();
         }
 
         // ---------- Toggle loot state of looked-at waypoint ----------
@@ -89,18 +61,25 @@ public class Keybinds {
             var level = MMAClient.level();
             if (level != null) {
                 wm.toggleLooted(level.dimension().location(), target);
-                ChatUtil.send(Component.literal("Toggled loot state at " + target.toShortString()));
             }
         }
 
-        // ---------- Route: add looked-at to front / remove last ----------
+        // ---------- Route edit looked-at waypoint keybind (add to end, or remove if newest) ----------
         if (routeAddRemoveKey.consumeClick()) {
             WaypointManager wm = MMAClient.WAYPOINT;
             BlockPos target = wm.findClosestWaypointInSight(64, Math.cos(Math.toRadians(30)));
             if (target != null) {
-                wm.addLookedAtWaypointToRouteFront();
+                wm.toggleRouteWaypoint(target);
             } else {
                 wm.removeLastWaypointFromRoute();
+            }
+        }
+
+        // ---------- Reset all loot states for current world ----------
+        if (resetLootStateKey.consumeClick()) {
+            var level = MMAClient.level();
+            if (level != null) {
+                MMAClient.WAYPOINT.resetLooted(level.dimension().location());
             }
         }
     }

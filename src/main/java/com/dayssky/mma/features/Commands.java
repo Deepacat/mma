@@ -30,6 +30,57 @@ public class Commands {
 
     public static void init() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            // ---------- MISC COMMANDS (Seperated, outside of /mma command) ----------
+            // /omw
+            dispatcher.register(CommandUtil.lit("omw", context -> {
+                ChatUtil.sendCommand("lfg omw");
+                return 0;
+            }, CommandUtil.arg("text", StringArgumentType.greedyString(), context -> {
+                String arg = StringArgumentType.getString(context, "text");
+                ChatUtil.sendCommand(String.format("lfg omw %s", arg));
+                return 0;
+            })));
+            // /compass
+            dispatcher.register(CommandUtil.lit("compass", context -> {
+                BlockPos pos = MMAClient.player().level().getSharedSpawnPos();
+                ChatUtil.send("Position: %s, %s, %s".formatted(pos.getX(), pos.getY(), pos.getZ()));
+                return 0;
+            }));
+            // /timer
+            dispatcher.register(CommandUtil.lit("timer", context -> {
+                if (timerMs == -1L) {
+                    timerMs = Util.now();
+                    ChatUtil.send(Component.translatable("text.mma.timer_start"));
+                } else {
+                    long delta = Util.now() - timerMs;
+                    ChatUtil.send(Component.translatable("text.mma.timer_end", FormatUtil.timestamp(delta)));
+                    timerMs = -1L;
+                }
+                return 0;
+            }));
+            // /lb (leaderboard)
+            dispatcher.register(CommandUtil.lit("lb",
+                    CommandUtil.arg(
+                            "lb_name",
+                            StringArgumentType.word(),
+                            context -> {
+                                String lbName = LeaderboardUtils.resolve(StringArgumentType.getString(context, "lb_name"));
+                                ChatUtil.sendCommand(String.format("leaderboard @s %s true 1", lbName));
+                                return 0;
+                            },
+                            (context, builder) -> SharedSuggestionProvider.suggest(LeaderboardUtils.getKeys(), builder),
+                            CommandUtil.arg(
+                                    "arg",
+                                    StringArgumentType.word(),
+                                    context -> {
+                                        String lbName = LeaderboardUtils.resolve(StringArgumentType.getString(context, "lb_name"));
+                                        String arg = StringArgumentType.getString(context, "arg");
+                                        ChatUtil.sendCommand(String.format("leaderboard @s %s true %s", lbName, arg));
+                                        return 0;
+                                    }
+                            )
+                    )
+            ));
             // ---------- Main /mma command ----------
             LiteralCommandNode<FabricClientCommandSource> mma = dispatcher.register(
                     CommandUtil.lit("mma",
@@ -85,12 +136,11 @@ public class Commands {
                                 ChatUtil.send(Component.literal("Command Help").withStyle(ChatFormatting.BOLD));
                                 ChatUtil.send("/cc - clear chat");
                                 ChatUtil.send("/omw - shorthand for /lfg omw");
+                                ChatUtil.send("/lb [leaderboard] - show your leaderboard position");
                                 ChatUtil.send("/mma debug - dumps internal state, don't use this unless something breaks");
-                                ChatUtil.send("/mma lb [leaderboard] - show your leaderboard position");
                                 ChatUtil.send("/mma config - opens the config");
                                 ChatUtil.send("/mma help - prints this message");
                                 ChatUtil.send("/mma version - displays version info");
-                                ChatUtil.send("/lb -> /mma lb");
                                 return 0;
                             }),
                             CommandUtil.lit("version", ignored -> {
@@ -103,7 +153,6 @@ public class Commands {
                                 );
                                 return 0;
                             }),
-
                             // ---------- WAYPOINT SYSTEM ----------
                             CommandUtil.lit("waypoint",
                                     CommandUtil.lit("clearall", ctx -> {
@@ -201,7 +250,7 @@ public class Commands {
                                                     )
                                             )
                                     ),
-                                    // ---------- ROUTE SUBCOMMANDS (properly placed) ----------
+                                    // ---------- ROUTE SUBCOMMANDS ----------
                                     CommandUtil.lit("route",
                                             CommandUtil.lit("begintracking",
                                                     CommandUtil.arg("name", StringArgumentType.word(),
@@ -209,7 +258,11 @@ public class Commands {
                                                                 String name = StringArgumentType.getString(ctx, "name");
                                                                 MMAClient.WAYPOINT.startTrackingRoute(name);
                                                                 return 0;
-                                                            })
+                                                            },
+                                                            (ctx, builder) -> SharedSuggestionProvider.suggest(
+                                                                    MMAClient.WAYPOINT.listRoutes(), builder
+                                                            )
+                                                    )
                                             ),
                                             CommandUtil.lit("stoptracking",
                                                     CommandUtil.arg("name", StringArgumentType.word(),
@@ -394,66 +447,6 @@ public class Commands {
                             )
                     )
             );
-
-            // ---------- SEPARATE COMMANDS ----------
-            // /omw
-            dispatcher.register(CommandUtil.lit("omw", context -> {
-                ChatUtil.sendCommand("lfg omw");
-                return 0;
-            }, CommandUtil.arg("text", StringArgumentType.greedyString(), context -> {
-                String arg = StringArgumentType.getString(context, "text");
-                ChatUtil.sendCommand(String.format("lfg omw %s", arg));
-                return 0;
-            })));
-
-            // /compass
-            dispatcher.register(CommandUtil.lit("compass", context -> {
-                BlockPos pos = MMAClient.player().level().getSharedSpawnPos();
-                ChatUtil.send("Position: %s, %s, %s".formatted(pos.getX(), pos.getY(), pos.getZ()));
-                return 0;
-            }));
-
-            // /timer
-            dispatcher.register(CommandUtil.lit("timer", context -> {
-                if (timerMs == -1L) {
-                    timerMs = Util.now();
-                    ChatUtil.send(Component.translatable("text.mma.timer_start"));
-                } else {
-                    long delta = Util.now() - timerMs;
-                    ChatUtil.send(Component.translatable("text.mma.timer_end", FormatUtil.timestamp(delta)));
-                    timerMs = -1L;
-                }
-                return 0;
-            }));
-
-            // /lb (leaderboard)
-            dispatcher.register(CommandUtil.lit("lb",
-                    CommandUtil.arg(
-                            "lb_name",
-                            StringArgumentType.word(),
-                            context -> {
-                                String lbName = LeaderboardUtils.resolve(StringArgumentType.getString(context, "lb_name"));
-                                ChatUtil.sendCommand(String.format("leaderboard @s %s true 1", lbName));
-                                return 0;
-                            },
-                            (context, builder) -> SharedSuggestionProvider.suggest(LeaderboardUtils.getKeys(), builder),
-                            CommandUtil.arg(
-                                    "arg",
-                                    StringArgumentType.word(),
-                                    context -> {
-                                        String lbName = LeaderboardUtils.resolve(StringArgumentType.getString(context, "lb_name"));
-                                        String arg = StringArgumentType.getString(context, "arg");
-                                        ChatUtil.sendCommand(String.format("leaderboard @s %s true %s", lbName, arg));
-                                        return 0;
-                                    }
-                            )
-                    )
-            ));
         });
-    }
-
-    // Helper for world suggestions (used in allwaypoints)
-    private static List<String> getWorldSuggestions() {
-        return WaypointManager.getWorldsWithWaypointFiles();
     }
 }

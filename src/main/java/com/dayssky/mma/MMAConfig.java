@@ -256,6 +256,7 @@ public class MMAConfig implements ConfigData {
 
         // Route labels
         public boolean displayRouteLabels = true;
+        public float labelYOffset = 0.6f;
     }
 
     @Retention(RetentionPolicy.RUNTIME)
