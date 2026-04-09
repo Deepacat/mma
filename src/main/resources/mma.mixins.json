@@ -4,6 +4,8 @@
   "package": "com.dayssky.mma.mixin",
   "compatibilityLevel": "JAVA_17",
   "client": [
+    "ClientboundBossEventPacketMixin",
+    "BossHealthOverlayAccessor",
     "ClientPacketListenerMixin",
     "EntityRenderDispatcherMixin",
     "GuiGraphicsMixin",
@@ -18,5 +20,7 @@
   "plugin": "com.dayssky.mma.MMAMixinConfigPlugin",
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "mixins": [
+  ]
 }

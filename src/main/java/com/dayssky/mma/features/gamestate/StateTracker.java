@@ -1,9 +1,11 @@
 package com.dayssky.mma.features.gamestate;
 
 import java.util.List;
+import java.util.UUID;
 
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.BossEvent;
 
 public interface StateTracker {
     default void onLeave() {
@@ -25,6 +27,9 @@ public interface StateTracker {
     }
 
     default void onRender(WorldRenderContext context) {
+    }
+
+    default void onBossBar(UUID uuid, BossEvent bossEvent) {
     }
 
     default List<Component> getAdditionalSidebarText() {

@@ -1,5 +1,6 @@
 package com.dayssky.mma.features.gamestate;
 
+import com.dayssky.mma.events.ClientBossBarUpdateEvent;
 import com.dayssky.mma.events.ClientReceiveSystemChatEvent;
 import com.dayssky.mma.events.ClientSetTitleEvent;
 import com.dayssky.mma.events.EventResult;
@@ -67,6 +68,11 @@ public class GameState {
             }
 
             return EventResult.CONTINUE;
+        });
+        ClientBossBarUpdateEvent.EVENT.register((uuid, bossEvent) -> {
+            if (this.currentStateTracker != null && Minecraft.getInstance().player != null) {
+                this.currentStateTracker.onBossBar(uuid, bossEvent);
+            }
         });
         WorldRenderEvents.BEFORE_DEBUG_RENDER.register((DebugRender) context -> {
             if (this.currentStateTracker != null && Minecraft.getInstance().player != null) {
