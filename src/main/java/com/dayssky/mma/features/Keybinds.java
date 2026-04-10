@@ -43,45 +43,6 @@ public class Keybinds {
             boolean value = MMAClient.config().hpIndicator.enableGlowingPlayer = !MMAClient.config().hpIndicator.enableGlowingPlayer;
             ChatUtil.send(Component.literal("player HP glowing: " + (value ? "enabled" : "disabled")));
         }
-
-        // ---------- Remove waypoint (double press) ----------
-        if (removeWaypointKey.consumeClick()) {
-            WaypointManager wm = MMAClient.WAYPOINT;
-            wm.handleRemoveWaypoint();
-        }
-
-        // ---------- Toggle loot state of looked-at waypoint ----------
-        if (toggleLootStateKey.consumeClick()) {
-            WaypointManager wm = MMAClient.WAYPOINT;
-            BlockPos target = wm.findClosestWaypointInSight(64, Math.cos(Math.toRadians(30)));
-            if (target == null) {
-                ChatUtil.send(Component.literal("No waypoint in sight."));
-                return;
-            }
-            var level = MMAClient.level();
-            if (level != null) {
-                wm.toggleLooted(level.dimension().location(), target);
-            }
-        }
-
-        // ---------- Route edit looked-at waypoint keybind (add to end, or remove if newest) ----------
-        if (routeAddRemoveKey.consumeClick()) {
-            WaypointManager wm = MMAClient.WAYPOINT;
-            BlockPos target = wm.findClosestWaypointInSight(64, Math.cos(Math.toRadians(30)));
-            if (target != null) {
-                wm.toggleRouteWaypoint(target);
-            } else {
-                wm.removeLastWaypointFromRoute();
-            }
-        }
-
-        // ---------- Reset all loot states for current world ----------
-        if (resetLootStateKey.consumeClick()) {
-            var level = MMAClient.level();
-            if (level != null) {
-                MMAClient.WAYPOINT.resetLooted(level.dimension().location());
-            }
-        }
     }
 
     private static void onPressedMeow() {
