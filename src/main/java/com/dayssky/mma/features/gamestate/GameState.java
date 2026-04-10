@@ -28,7 +28,9 @@ public class GameState {
     private static final List<Pair<String, Supplier<StateTracker>>> GAME_STATE_BY_DIMENSION = List.of(
             Pair.of("monumenta:portal", PortalStateTracker::new),
             Pair.of("monumenta:ruin", RuinStateTracker::new),
-            Pair.of("monumenta:hexfall", HexfallStateTracker::new)
+            Pair.of("monumenta:hexfall", HexfallStateTracker::new),
+            Pair.of("minecraft:overworld", HuntStateTracker::new)
+//            Pair.of("monumenta:ring", HuntStateTracker::new)
     );
     private String dimensionName = null;
     @Nullable
