@@ -14,15 +14,18 @@ import com.dayssky.mma.MMAConfig.Appearance;
 import com.dayssky.mma.MMAConfig.FeatureToggles;
 import com.dayssky.mma.debug.Debug;
 import com.dayssky.mma.events.EntityShieldDisabledEvent;
+import com.dayssky.mma.features.Commands;
+import com.dayssky.mma.features.ContractCheck;
+import com.dayssky.mma.features.Keybinds;
+import com.dayssky.mma.features.LeaderboardUtils;
+import com.dayssky.mma.features.SideBarManager;
 import com.dayssky.mma.features.cz.ZenithModule;
 import com.dayssky.mma.features.cz.data.CharmDataRegistries;
 import com.dayssky.mma.features.gamestate.GameState;
-import com.dayssky.mma.util.BlockPosAdapter;
 import com.dayssky.mma.util.SafeExceptionLogger;
 import com.dayssky.mma.util.TickScheduler;
 import com.dayssky.mma.util.Util;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import me.shedaniel.autoconfig.ConfigHolder;
@@ -36,13 +39,10 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 
 public class MMAClient implements ClientModInitializer {
-    public static final Gson GSON = new GsonBuilder().setPrettyPrinting()
-            .registerTypeHierarchyAdapter(BlockPos.class, new BlockPosAdapter())
-            .create();
+    public static final Gson GSON = new Gson();
     public static final Logger LOGGER = LogManager.getLogger();
     public static final TickScheduler SCHEDULER = new TickScheduler();
     public static final GameState GAME_STATE = new GameState();
@@ -65,7 +65,7 @@ public class MMAClient implements ClientModInitializer {
     }
 
     public static void reload() {
-        MMAConfig config = CONFIG.get();
+        MMAConfig config = (MMAConfig) CONFIG.get();
         SIDEBAR = new SideBarManager(config);
     }
 
@@ -80,8 +80,6 @@ public class MMAClient implements ClientModInitializer {
     public static FeatureToggles features() {
         return ((MMAConfig) CONFIG.get()).features;
     }
-
-    public static final WaypointManager WAYPOINT = new WaypointManager();
 
     public void onInitializeClient() {
         try {
@@ -107,7 +105,6 @@ public class MMAClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register((EndTick) mc -> GLOBAL_SAFE_EH.runSafely(() -> {
             SIDEBAR.onTick(mc);
             Keybinds.tick();
-            WAYPOINT.tick();
             ContractCheck.tick();
         }));
         Debug.init();
@@ -119,20 +116,11 @@ public class MMAClient implements ClientModInitializer {
                 SideBarManager.updateGuardTimer(entity);
             }
         }));
-
-        WAYPOINT.init();
-        WorldRenderEvents.AFTER_ENTITIES.register(WAYPOINT::renderFilled);
-        WorldRenderEvents.BEFORE_DEBUG_RENDER.register((context) -> {
-            WAYPOINT.renderOutline(context);
-            WAYPOINT.renderLabels(context);
-        });
-
         VERSION_CHECK = new VersionChecker((MMAConfig) CONFIG.get());
         VERSION_CHECK.init();
     }
 
     private void initializeAfterMC() {
-        WAYPOINT.clientInit();
         reload();
     }
 }

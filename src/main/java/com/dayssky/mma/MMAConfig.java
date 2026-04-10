@@ -1,5 +1,6 @@
 package com.dayssky.mma;
 
+import com.dayssky.mma.features.ViewModel;
 import com.dayssky.mma.features.cz.data.CharmEffectType;
 import com.dayssky.mma.features.cz.data.CharmType;
 
@@ -52,9 +53,6 @@ public class MMAConfig implements ConfigData {
     @Category("zenith")
     @TransitiveObject
     public MMAConfig.Zenith zenith = new MMAConfig.Zenith();
-    @Category("waypoints")
-    @TransitiveObject
-    public MMAConfig.Waypoints waypoints = new MMAConfig.Waypoints();
 
     public static ConfigHolder<MMAConfig> register() {
         ConfigHolder<MMAConfig> holder = AutoConfig.register(
@@ -84,7 +82,7 @@ public class MMAConfig implements ConfigData {
         public int bracketColor = 12041720;
         @ColorPicker
         public int tagColor = 13017334;
-        public String tagText = "MAID";
+        public String tagText = "MMA";
         @ColorPicker
         public int textColor = 16047062;
         @ColorPicker
@@ -112,6 +110,8 @@ public class MMAConfig implements ConfigData {
         public boolean enableVanillaEffectInUMMHud = false;
         public boolean enableVanityDurability = true;
         public boolean enableCustomSplash = true;
+        @CollapsibleObject
+        public ViewModel.Config viewModel = new ViewModel.Config();
         @CollapsibleObject
         public MMAConfig.InventoryOverlayToggles inventoryOverlay = new MMAConfig.InventoryOverlayToggles();
         @CollapsibleObject
@@ -226,30 +226,6 @@ public class MMAConfig implements ConfigData {
         public boolean displayUUID = false;
         @ZenithAbilitySelection
         public Set<CharmEffectType> ignoredAbilities = new HashSet<>();
-    }
-
-    public static class Waypoints {
-        public boolean enable = false;
-        public boolean recordChests = true;
-        public boolean disableInPlots = true;
-        public boolean skipBrokenChests = false;
-        public boolean enableLootStateTracking = false;
-        public List<String> disabledWorlds = new ArrayList<>(List.of("monumenta:zenith", "monumenta:depths", "monumenta:corridors"));
-        // Rendering
-        public boolean onlyShowNextInRoute = false;
-        public boolean displayRouteNumberLabels = true;
-        public float labelYOffset = 0.6f;
-        public float filledAlpha = 0.75f;
-        public boolean filled = true;
-        public boolean outline = false;
-        public boolean distanceFade = true;
-        public int radius = 128;
-        // Colors
-        @ColorPicker public int baseColor = 0xFFAA00;
-        @ColorPicker public int lootedStateColor = 0x808080;
-        @ColorPicker public int routeNextColor = 0x00FF00;
-        @ColorPicker public int routeLootedColor = 0x808080;
-        @ColorPicker public int routeUnlootedColor = 0xFFAA00;
     }
 
     @Retention(RetentionPolicy.RUNTIME)
