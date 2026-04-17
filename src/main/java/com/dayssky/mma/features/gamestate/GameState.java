@@ -1,5 +1,6 @@
 package com.dayssky.mma.features.gamestate;
 
+import com.dayssky.mma.MMAClient;
 import com.dayssky.mma.events.ClientBossBarUpdateEvent;
 import com.dayssky.mma.events.ClientReceiveSystemChatEvent;
 import com.dayssky.mma.events.ClientSetTitleEvent;
@@ -29,8 +30,9 @@ public class GameState {
             Pair.of("monumenta:portal", PortalStateTracker::new),
             Pair.of("monumenta:ruin", RuinStateTracker::new),
             Pair.of("monumenta:hexfall", HexfallStateTracker::new),
+            Pair.of("monumenta:ring", HuntStateTracker::new),
+            // debug
             Pair.of("minecraft:overworld", HuntStateTracker::new)
-//            Pair.of("monumenta:ring", HuntStateTracker::new)
     );
     private String dimensionName = null;
     @Nullable
@@ -54,7 +56,6 @@ public class GameState {
             if (this.currentStateTracker != null && Minecraft.getInstance().player != null) {
                 this.currentStateTracker.onTitle(text);
             }
-
             return EventResult.CONTINUE;
         });
         ClientSetTitleEvent.SUBTITLE.register((ClientSetTitleEvent) text -> {
@@ -114,6 +115,7 @@ public class GameState {
                 if (worldFilterRes.isEmpty()) {
                     ChatUtil.sendDebug("unknown dimension '" + newDimensionName + "'");
                 } else {
+                    MMAClient.LOGGER.info("Entering dimension {}, starting {} state tracker", newDimensionName, worldFilterRes.get().first());
                     this.currentStateTracker = (StateTracker) ((Supplier) worldFilterRes.get().second()).get();
                 }
             }
